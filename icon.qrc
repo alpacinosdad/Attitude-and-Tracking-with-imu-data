@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/">
+        <file>BATMAINTITLE.png</file>
+        <file>Fire.ico</file>
+        <file>Fire.png</file>
+        <file>Settings.png</file>
+        <file>start.png</file>
+        <file>stop.png</file>
+        <file>Black.png</file>
+        <file>Green.png</file>
+        <file>Grey.png</file>
+        <file>Red.png</file>
+    </qresource>
+</RCC>
