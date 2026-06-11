@@ -185,12 +185,14 @@ static void SaveImuResultFileInPc(const QString &fileName, uint32_t arrayNumber)
     MIL_Handle_t imuHandle = {};
     mil_handle_init(&imuHandle);
 
+
+    //2026.6.10 mike nian 滤波后数据先化为g再称9.8
     const uint32_t validCount = qMin<uint32_t>(arrayNumber, static_cast<uint32_t>(heattimes.size()));
     for (uint32_t i = 0; i < validCount; ++i)
     {
-        const float ax = qIsFinite(LOG_Accel_x_h[i]) ? static_cast<float>(LOG_Accel_x_h[i] * 9.8) : 0.0f;      // -> m/s^2
-        const float ay = qIsFinite(LOG_Accel_y_h[i]) ? static_cast<float>(LOG_Accel_y_h[i] * 9.8) : 0.0f;
-        const float az = qIsFinite(LOG_Accel_z_h[i]) ? static_cast<float>(LOG_Accel_z_h[i] * 9.8) : 0.0f;
+        const float ax = qIsFinite(LOG_Accel_x_h[i]) ? static_cast<float>((LOG_Accel_x_h[i] / 1000) * 9.8) : 0.0f;      // -> m/s^2
+        const float ay = qIsFinite(LOG_Accel_y_h[i]) ? static_cast<float>((LOG_Accel_y_h[i] / 1000) * 9.8) : 0.0f;
+        const float az = qIsFinite(LOG_Accel_z_h[i]) ? static_cast<float>((LOG_Accel_z_h[i] / 1000) * 9.8) : 0.0f;
         const float gx = qIsFinite(LOG_Gyro_x_h[i]) ? static_cast<float>(LOG_Gyro_x_h[i] * 0.01745) : 0.0f;   // -> rad/s
         const float gy = qIsFinite(LOG_Gyro_y_h[i]) ? static_cast<float>(LOG_Gyro_y_h[i] * 0.01745) : 0.0f;
         const float gz = qIsFinite(LOG_Gyro_z_h[i]) ? static_cast<float>(LOG_Gyro_z_h[i] * 0.01745) : 0.0f;
@@ -6825,15 +6827,39 @@ void Widget::on_Bat_export_flash_data_clicked()
 **************************************************************************/
 
 
+// 26.6.10 mike 新建两个滤波器，低通
+
+
+
+
+const double Widget::SOS_COEFFS[1][6] = {
+    { 0.0304687473064697, 0.0304687473064697, 0.0,
+      1.0, -0.939062505387061, 0.0 },
+};
+
+
+
+#if 0
+
+// 26.6.10 mike 新建两个滤波器，高通
+const double Widget::SOS_COEFFS[1][6] = {
+    { 9.6953125269346970e-01, -9.6953125269346970e-01, 0.0000000000000000e+00,
+      1.0000000000000000e+00, -9.3906250538693940e-01, 0.0000000000000000e+00 },
+};
+
+#endif
 
 // 4  װ     ˹  ͨ ˲   ϵ   (0.02-0.20 Hz, fs=50Hz， time：26.6.3，purpose)
 
 
 
+
+#if 0
 const double Widget::SOS_COEFFS[1][6] = {
     { 2.4521609249465882e-02, 0.0000000000000000e+00, -2.4521609249465882e-02,
       1.0000000000000000e+00, -1.9460284953514277e+00, 9.5095678150106833e-01 },
 };
+#endif
 
 
 
@@ -6863,14 +6889,15 @@ const double Widget::SOS_COEFFS[4][6] =
 
 // 26.6.3 mike 修改其他滤波器看是否23s卡死
 
-
 #if 0
-
 const double Widget::SOS_COEFFS[1][6] = {
     { 1, 1, 1,
       1, 1, 1 },
 };
 #endif
+
+
+
 
 //        ׽  ˲  (Direct Form II Transposed)
 double Widget::sosFilterSingle(const double sec[6], double in, SosState &state)
@@ -7028,7 +7055,7 @@ void Widget::initFilterSteadyState(FilterChannel &ch, double dcOffset)
 {
     // ?     λ  ʼ        Ԥ ˲ N   㣬      ʼ  λƫ
     // Ԥ ˲     =3*fs/fc_low = 3*50/0.02=7500 㣬ȡ1000   㹻
-    const int PRE_FILTER_POINTS = 120;
+    const int PRE_FILTER_POINTS = 200;
 
     ch.reset();
     for (int i = 0; i < PRE_FILTER_POINTS; i++) {

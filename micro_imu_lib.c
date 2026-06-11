@@ -7,6 +7,7 @@
 #define EN_ACC_FIX 1
 //重力系数
 #define GRAV_FACT 9.8f
+
 //加速度计修正系数
 #define ACC_FIX_FACT_MAX 0.8f
 //加速度计修正指数衰减系数
@@ -309,14 +310,32 @@ static void acce_to_abs(float ax, float ay, float az, MIL_RotMat_t* R, float *aa
     *aaz = R->R31*ax + R->R32*ay + R->R33*az;
 }
 
-static void acce_to_linear(float ax, float ay, float az, MIL_RotMat_t* R, float *lax, float *lay, float *laz)
+
+//mike nian 26.6.10 修改旋转矩阵
+//    
+
+static void acce_to_linear(float ax, float ay, float az, MIL_RotMat_t* R,
+    float *lax, float *lay, float *laz)
 {
-    float gravity_body_x = R->R13 * GRAV_FACT;
-    float gravity_body_y = R->R23 * GRAV_FACT;
-    float gravity_body_z = R->R33 * GRAV_FACT;
-    if(lax) *lax = ax - gravity_body_x;
-    if(lay) *lay = ay - gravity_body_y;
-    if(laz) *laz = az - gravity_body_z;
+  // 先求 R 的转置矩阵 Rt = R^T
+  float Rt11 = R->R11;
+  float Rt12 = R->R21;
+  float Rt13 = R->R31;
+  float Rt21 = R->R12;
+  float Rt22 = R->R22;
+  float Rt23 = R->R32;
+  float Rt31 = R->R13;
+  float Rt32 = R->R23;
+  float Rt33 = R->R33;
+
+ // 世界系重力向量是 [0, 0, GRAV_FACT_linear]
+  float gravity_body_x = Rt13 * GRAV_FACT;
+  float gravity_body_y = Rt23 * GRAV_FACT;
+  float gravity_body_z = Rt33 * GRAV_FACT;
+
+  if (lax) *lax = ax - gravity_body_x;
+  if (lay) *lay = ay - gravity_body_y;
+  if (laz) *laz = az - gravity_body_z;
 }
 
 static void quat_from_accel(float ax, float ay, float az, MIL_Quat_t* q)

@@ -14,7 +14,7 @@ except AttributeError:
 # 1. 加载你自己的真实数据
 # ==========================================
 # 请确保这里的路径是你真实的表格路径
-file_path = "BAT_Heat_Log_Data_2026_06_09_15_16_06_imu_result.csv"  # 改成你的文件名
+file_path = "BAT_Heat_Log_Data_2026_06_09_18_05_10_imu_result.csv"  # 改成你的文件名
 df = pd.read_csv(file_path)
 
 num_frames = len(df)

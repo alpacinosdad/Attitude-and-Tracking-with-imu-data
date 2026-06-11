@@ -15,11 +15,11 @@ import matplotlib.pyplot as plt
 # 0. Parameters
 # ============================================================
 
-CSV_PATH = "BAT_Heat_Log_Data_2026_06_09_15_16_06.csv"
+CSV_PATH = "shuzhi_low_nomove.csv"
 
 # Python index starts from 0.
 # ROW_INDEX = 0 means the first data row.
-ROW_INDEX = 1500
+ROW_INDEX = 2
 
 # If the attitude is completely opposite, set this to True.
 USE_NEGATIVE_ACCEL = False
