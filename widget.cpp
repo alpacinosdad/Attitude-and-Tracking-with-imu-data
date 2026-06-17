@@ -6827,16 +6827,38 @@ void Widget::on_Bat_export_flash_data_clicked()
 **************************************************************************/
 
 
-// 26.6.10 mike 新建两个滤波器，低通
+// 26.6.15 mike 新建两个滤波器，低通给加速度计，高通给陀螺仪
 
 
-
-
-const double Widget::SOS_COEFFS[1][6] = {
+const double Widget::SOS_COEFFS_GYRO[1][6] = {
     { 0.0304687473064697, 0.0304687473064697, 0.0,
       1.0, -0.939062505387061, 0.0 },
 };
 
+
+const double Widget::SOS_COEFFS_ACC[1][6] = {
+    { 0.0304687473064697, 0.0304687473064697, 0.0,
+      1.0, -0.939062505387061, 0.0 },
+};
+
+
+
+#if 0
+const double Widget::SOS_COEFFS_ACC[1][6] = {
+    { 1, 1, 1,
+      1, 1, 1 },
+};
+#endif
+
+
+// 26.6.10 mike 新建两个滤波器
+
+#if 0
+const double Widget::SOS_COEFFS[1][6] = {
+    { 0.0304687473064697, 0.0304687473064697, 0.0,
+      1.0, -0.939062505387061, 0.0 },
+};
+#endif
 
 
 #if 0
@@ -6913,15 +6935,11 @@ double Widget::sosFilterSingle(const double sec[6], double in, SosState &state)
 }
 
 //        ж  ׽ 
-double Widget::sosFilterCascade(FilterChannel &ch, double in)
+double Widget::sosFilterCascade(FilterChannel &ch, double in, const double coeffs[NUM_STAGES][6])
 {
     double x = in;
     for (int s = 0; s < NUM_STAGES; s++) {
-
-        // 26.6.3 mike 直接输出查看是否崩溃
-         x = sosFilterSingle(SOS_COEFFS[s], x, ch.states[s]);
-        //  x = x;
-
+        x = sosFilterSingle(coeffs[s], x, ch.states[s]);
     }
     return x;
 }
@@ -6991,13 +7009,13 @@ void Widget::processData(float rawAx, float rawAy, float rawAz,float rawGx, floa
     }
 
     // 2. ʵʱ ˲ 
-    double filtAx = sosFilterCascade(m_filtAx, rawAx);
-    double filtAy = sosFilterCascade(m_filtAy, rawAy);
-    double filtAz = sosFilterCascade(m_filtAz, rawAz);
+    double filtAx = sosFilterCascade(m_filtAx, rawAx,SOS_COEFFS_ACC);
+    double filtAy = sosFilterCascade(m_filtAy, rawAy,SOS_COEFFS_ACC);
+    double filtAz = sosFilterCascade(m_filtAz, rawAz,SOS_COEFFS_ACC);
 
-    double filtGx = sosFilterCascade(m_filtGx, rawGx);
-    double filtGy = sosFilterCascade(m_filtGy, rawGy);
-    double filtGz = sosFilterCascade(m_filtGz, rawGz);
+    double filtGx = sosFilterCascade(m_filtGx, rawGx,SOS_COEFFS_GYRO);
+    double filtGy = sosFilterCascade(m_filtGy, rawGy,SOS_COEFFS_GYRO);
+    double filtGz = sosFilterCascade(m_filtGz, rawGz,SOS_COEFFS_GYRO);
 
 
     LOG_Accel_x_h[Log_For_Act_display_count-1] = filtAx;
@@ -7055,12 +7073,14 @@ void Widget::initFilterSteadyState(FilterChannel &ch, double dcOffset)
 {
     // ?     λ  ʼ        Ԥ ˲ N   㣬      ʼ  λƫ
     // Ԥ ˲     =3*fs/fc_low = 3*50/0.02=7500 㣬ȡ1000   㹻
-    const int PRE_FILTER_POINTS = 200;
+    const int PRE_FILTER_POINTS = 300;
 
     ch.reset();
     for (int i = 0; i < PRE_FILTER_POINTS; i++) {
-        sosFilterCascade(ch, dcOffset);
+        sosFilterCascade(ch, dcOffset, SOS_COEFFS_ACC); // 26.6.10 mike  ʹ SOS_COEFFS_ACC  26.6.15 mike 分开加速度计和陀螺仪
+        sosFilterCascade(ch, dcOffset, SOS_COEFFS_GYRO);
     }
+
 }
 
 

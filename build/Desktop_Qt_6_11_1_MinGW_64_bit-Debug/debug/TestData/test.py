@@ -1,71 +1,212 @@
+import os
+from pathlib import Path
+import matplotlib
 import numpy as np
 import pandas as pd
+from gesture_rectangle_show import load_attitude_df, sensor_to_world
+
+matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 
-# 1) 读取数据
-csv_path = "BAT_Heat_Log_Data_2026_05_27_22_00_56_imu_result.csv"  # 改成你的文件名
-df = pd.read_csv(csv_path)
 
-# 2) 组装旋转矩阵 R(t) (N,3,3)
-R_all = np.empty((len(df), 3, 3), dtype=float)
-R_all[:, 0, 0] = df["R11"]; R_all[:, 0, 1] = df["R12"]; R_all[:, 0, 2] = df["R13"]
-R_all[:, 1, 0] = df["R21"]; R_all[:, 1, 1] = df["R22"]; R_all[:, 1, 2] = df["R23"]
-R_all[:, 2, 0] = df["R31"]; R_all[:, 2, 1] = df["R32"]; R_all[:, 2, 2] = df["R33"]
 
-t = df["Time_s"].to_numpy() if "Time_s" in df.columns else np.arange(len(df))
+def integrate_trapezoidal(values, dt):
+    values = np.asarray(values, dtype=float)
+    dt = np.asarray(dt, dtype=float)
+    if values.ndim == 1:
+        values = values[:, None]
 
-# 3) （强烈建议）降采样，不然帧太多会很慢
-step = max(1, len(df)//800)  # 目标大概 800 帧以内
-R_all = R_all[::step]
-t = t[::step]
+    integrated = np.zeros_like(values)
+    if dt.size > 0:
+        segments = 0.5 * (values[:-1] + values[1:]) * dt[:, None]
+        integrated[1:] = np.cumsum(segments, axis=0)
 
-# 4) 选择一根“机体指向杆”
-v0 = np.array([100.0, 0.0, 0.0])   # 你想要的“默认起始100”
+    return integrated[:, 0] if integrated.shape[1] == 1 else integrated
 
-# 5) 预先算出杆尖端轨迹（尾迹）
-tips = (R_all @ v0.reshape(3,1)).squeeze(-1)  # (N,3)
 
-# 6) 建图
-fig = plt.figure(figsize=(6,6))
-ax = fig.add_subplot(111, projection="3d")
+def compute_trajectory(time_s, accel):
+    time_s = np.asarray(time_s, dtype=float)
+    accel = np.asarray(accel, dtype=float)
+    if accel.ndim == 1:
+        accel = accel[:, None]
 
-L = 110  # 坐标范围，略大于向量长度
-def setup_ax():
-    ax.set_xlim(-L, L); ax.set_ylim(-L, L); ax.set_zlim(-L, L)
-    ax.set_xlabel("X"); ax.set_ylabel("Y"); ax.set_zlabel("Z")
+    dt = np.diff(time_s)
+    velocity = integrate_trapezoidal(accel, dt)
+    displacement = integrate_trapezoidal(velocity, dt)
+    return velocity, displacement
 
-def update(i):
-    ax.cla()
-    setup_ax()
 
-    R = R_all[i]
-    # 机体三轴（单位长度即可）
-    x_axis = R[:,0]
-    y_axis = R[:,1]
-    z_axis = R[:,2]
+def test_integrate_trapezoidal_constant_acceleration():
+    time_s = np.array([0.0, 0.02, 0.04, 0.06], dtype=float)
+    accel = np.array([1.0, 1.0, 1.0, 1.0], dtype=float)
+    velocity, displacement = compute_trajectory(time_s, accel)
 
-    # 画机体坐标轴
-    ax.quiver(0,0,0, *x_axis, color="r", linewidth=3, length=40)
-    ax.quiver(0,0,0, *y_axis, color="g", linewidth=3, length=40)
-    ax.quiver(0,0,0, *z_axis, color="b", linewidth=3, length=40)
+    expected_velocity = np.array([0.0, 0.02, 0.04, 0.06], dtype=float)
+    expected_displacement = np.array([0.0, 0.0002, 0.0008, 0.0018], dtype=float)
 
-    # 画“指向杆”（从原点到杆尖端）
-    tip = tips[i]
-    ax.plot([0, tip[0]], [0, tip[1]], [0, tip[2]], color="k", linewidth=3)
+    assert np.allclose(velocity, expected_velocity, atol=1e-8)
+    assert np.allclose(displacement, expected_displacement, atol=1e-10)
 
-    # 画尾迹（到当前帧为止）
-    ax.plot(tips[:i+1,0], tips[:i+1,1], tips[:i+1,2], color="orange", linewidth=2, alpha=0.8)
 
-    ax.set_title(f"t = {t[i]:.2f}s  (frame {i}/{len(t)-1})")
+def test_load_attitude_df_has_required_columns(tmp_path):
+    sample_csv = tmp_path / "sample.csv"
+    sample_csv.write_text(
+        "time_s,lax,lay,laz\n"
+        "0.00,0.0,0.0,0.0\n"
+        "0.02,1.0,0.0,0.0\n"
+    )
+    df = load_attitude_df(str(sample_csv))
+    assert "time_s" in df.columns
+    assert "lax" in df.columns
+    assert "lay" in df.columns
+    assert "laz" in df.columns
+    assert df.shape[0] == 2
+
+
+def test_plot_linear_accel_velocity_displacement(tmp_path):
+    csv_path = Path(__file__).resolve().parent / "BAT_Heat_Log_Data_2026_06_11_16_13_23_imu_result.csv"
+    if not csv_path.exists():
+        pytest.skip("Reference CSV file not available for plot test")
+
+    df = load_attitude_df(str(csv_path))
+    required_columns = {"time_s", "lax", "lay", "laz"}
+    assert required_columns.issubset(set(df.columns))
+
+    time_s = df["time_s"].to_numpy(dtype=float)
+    accel = df[["lax", "lay", "laz"]].to_numpy(dtype=float)
+
+    velocity, displacement = compute_trajectory(time_s, accel)
+    displacement_world = sensor_to_world(displacement)
+
+    fig, axes = plt.subplots(3, 1, figsize=(10, 9), sharex=True)
+    labels = ["lax", "lay", "laz"]
+    for idx, label in enumerate(labels):
+        axes[idx].plot(time_s, accel[:, idx], label=f"accel {label}", color="C0")
+        axes[idx].plot(time_s, velocity[:, idx], label=f"vel {label}", color="C1")
+        axes[idx].plot(time_s, displacement[:, idx], label=f"disp {label}", color="C2")
+        axes[idx].set_ylabel(label)
+        axes[idx].legend(loc="upper left", fontsize="small")
+        axes[idx].grid(True)
+
+    axes[-1].set_xlabel("time_s")
+    fig.tight_layout()
+    fig_path = tmp_path / "linear_accel_velocity_displacement.png"
+    fig.savefig(fig_path)
+    plt.close(fig)
+    assert fig_path.exists()
+
+    fig2 = plt.figure(figsize=(8, 6))
+    ax3d = fig2.add_subplot(111, projection="3d")
+    ax3d.plot(
+        displacement_world[:, 0],
+        displacement_world[:, 1],
+        displacement_world[:, 2],
+        color="tab:orange",
+        linewidth=2,
+    )
+    ax3d.set_title("Displacement in reference world coordinate")
+    ax3d.set_xlabel("X")
+    ax3d.set_ylabel("Y")
+    ax3d.set_zlabel("Z")
+    ax3d.grid(True)
+    fig2.tight_layout()
+    world_fig_path = tmp_path / "displacement_world.png"
+    fig2.savefig(world_fig_path)
+    plt.close(fig2)
+    assert world_fig_path.exists()
+
+
+
+import argparse
+# ...existing code...
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="读取 CSV 中的线性加速度 lax/lay/laz，按时间积分出速度/位移并保存图像。"
+    )
+    parser.add_argument(
+        "csv_file",
+        type=Path,
+        nargs="?",
+        default=Path(__file__).resolve().parent
+        / "BAT_Heat_Log_Data_2026_06_11_16_13_23_imu_result.csv",
+        help="输入 CSV 文件，必须包含 time_s、lax、lay、laz 列。",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path.cwd(),
+        help="输出图片目录，默认当前目录。",
+    )
+    parser.add_argument(
+        "--show",
+        action="store_true",
+        help="如果支持显示，则显示图像。",
+    )
+    args = parser.parse_args()
+
+    output_dir = args.output_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    df = load_attitude_df(str(args.csv_file))
+    required_columns = {"time_s", "lax", "lay", "laz"}
+    if not required_columns.issubset(df.columns):
+        raise ValueError(
+            f"CSV 文件必须包含列 {required_columns}，实际列: {list(df.columns)}"
+        )
+
+    time_s = df["time_s"].to_numpy(dtype=float)
+    accel = df[["lax", "lay", "laz"]].to_numpy(dtype=float)
+
+    velocity, displacement = compute_trajectory(time_s, accel)
+    displacement_world = sensor_to_world(displacement)
+
+    fig, axes = plt.subplots(3, 1, figsize=(10, 9), sharex=True)
+    labels = ["lax", "lay", "laz"]
+    for idx, label in enumerate(labels):
+        axes[idx].plot(time_s, accel[:, idx], label=f"accel {label}", color="C0")
+        axes[idx].plot(time_s, velocity[:, idx], label=f"vel {label}", color="C1")
+        axes[idx].plot(time_s, displacement[:, idx], label=f"disp {label}", color="C2")
+        axes[idx].set_ylabel(label)
+        axes[idx].legend(loc="upper left", fontsize="small")
+        axes[idx].grid(True)
+
+    axes[-1].set_xlabel("time_s (s)")
+    fig.tight_layout()
+    fig_path = output_dir / "linear_accel_velocity_displacement.png"
+    fig.savefig(fig_path, dpi=200)
+    plt.close(fig)
+    print(f"Saved {fig_path}")
+
+    fig2 = plt.figure(figsize=(8, 6))
+    ax3d = fig2.add_subplot(111, projection="3d")
+    ax3d.plot(
+        displacement_world[:, 0],
+        displacement_world[:, 1],
+        displacement_world[:, 2],
+        color="tab:orange",
+        linewidth=2,
+    )
+    ax3d.set_title("Displacement in reference world coordinate")
+    ax3d.set_xlabel("X")
+    ax3d.set_ylabel("Y")
+    ax3d.set_zlabel("Z")
+    ax3d.grid(True)
+    fig2.tight_layout()
+    world_fig_path = output_dir / "displacement_world.png"
+    fig2.savefig(world_fig_path, dpi=200)
+    plt.close(fig2)
+    print(f"Saved {world_fig_path}")
+
     
+    print("cwd:", Path.cwd())
+    print("output_dir:", output_dir.resolve())
 
 
-print("rows:", len(df))
-print("Time head/tail:", df["Time_s"].iloc[0], df["Time_s"].iloc[-1])
+    if args.show:
+        plt.show()
 
 
-
-
-ani = FuncAnimation(fig, update, frames=len(t), interval=20)
-plt.show()
+if __name__ == "__main__":
+    main()

@@ -443,7 +443,7 @@ private:
 
        // 纯 C++ 滤波器函数
        double sosFilterSingle(const double sec[6], double in, SosState &state);
-       double sosFilterCascade(FilterChannel &ch, double in);
+       double sosFilterCascade(FilterChannel &ch,double in, const double coeffs[NUM_STAGES][6]);
        void initFilters();
        void initHannWindow();
        void initFilterSteadyState(FilterChannel &ch, double dcOffset);
@@ -461,7 +461,9 @@ private:
        double m_simTime;
 
        // 滤波器系数 (SOS 格式: [b0, b1, b2, a0, a1, a2], a0=1)
-       static const double SOS_COEFFS[NUM_STAGES][6];
+
+       static const double SOS_COEFFS_ACC[NUM_STAGES][6];
+       static const double SOS_COEFFS_GYRO[NUM_STAGES][6];
 
        QVector<double> m_timeData;
        QVector<double> m_rawAxData;

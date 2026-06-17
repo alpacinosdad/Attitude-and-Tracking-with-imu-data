@@ -13,7 +13,7 @@
 //加速度计修正指数衰减系数
 #define ATTEN_FACT 100
 //四元数初始化所需的原始样本数
-#define INIT_QUAT_SAMPLE_COUNT 20
+#define INIT_QUAT_SAMPLE_COUNT 1
 //静止判定所需样本数（约 1s@50Hz）
 #define STATIONARY_SAMPLE_COUNT 50
 //静止判定阈值
