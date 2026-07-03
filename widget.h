@@ -31,11 +31,15 @@
 #include <cmath>
 /*     math           */
 
+#include "filter_design_lib.h"
+
 
 /* 滤波器参数 */
-#define NUM_STAGES 1          // 4 阶巴特沃斯（4 个二阶节）
+#define NUM_STAGES 1          // 保持现有 6 参数二阶节结构
 #define WINDOW_SIZE 256        // 汉宁窗大小
 #define FS 50.0f               // 采样率 50Hz
+#define ACCEL_CUTOFF_HZ 0.5f
+#define GYRO_CUTOFF_HZ 0.5f
 
 
 
@@ -460,10 +464,10 @@ private:
        double m_hannWindow[WINDOW_SIZE];
        double m_simTime;
 
-       // 滤波器系数 (SOS 格式: [b0, b1, b2, a0, a1, a2], a0=1)
+       // 滤波器系数 (ba 格式: [b0, b1, b2, a0, a1, a2], a0=1)
 
-       static const double SOS_COEFFS_ACC[NUM_STAGES][6];
-       static const double SOS_COEFFS_GYRO[NUM_STAGES][6];
+       static double SOS_COEFFS_ACC[NUM_STAGES][6];
+       static double SOS_COEFFS_GYRO[NUM_STAGES][6];
 
        QVector<double> m_timeData;
        QVector<double> m_rawAxData;

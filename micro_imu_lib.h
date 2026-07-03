@@ -6,13 +6,16 @@ typedef struct {
     float ax;    // X轴加速度 (m/s²)
     float ay;    // Y轴加速度 (m/s²)
     float az;    // Z轴加速度 (m/s²)
+
     // 陀螺仪角速度
     float gx;    // X轴角速度 (rad/s)
     float gy;    // Y轴角速度 (rad/s)
     float gz;    // Z轴角速度 (rad/s)
+
     // 时间戳
     float time;  // 时间戳 (s)
 } MIL_IMU_t;
+
 
 //四元数结构体
 typedef struct {
@@ -22,12 +25,14 @@ typedef struct {
     float z;   /**< 四元数虚部 z，也叫 q3 */
 } MIL_Quat_t;
 
+
 //旋转矩阵结构体
 typedef struct {
     float R11, R12, R13;
     float R21, R22, R23;
     float R31, R32, R33;
 } MIL_RotMat_t;
+
 
 //姿态角结构体
 typedef struct {
@@ -36,12 +41,14 @@ typedef struct {
     float yaw;            /**< 欧拉角 Yaw (°) */
 } MIL_AttiAng_t;
 
+
 //绝对坐标系加速度结构体
 typedef struct {
     float x;   // 绝对X轴加速度 (m/s²)
     float y;   // 绝对Y轴加速度 (m/s²)
     float z;   // 绝对Z轴加速度 (m/s²)
 } MIL_AcceAbs_t;
+
 
 //线性加速度结构体（去重力）
 typedef struct {
@@ -50,40 +57,81 @@ typedef struct {
     float z;   // 线性Z轴加速度 (m/s²)
 } MIL_AcceLin_t;
 
+
 //IMU库结构体
 typedef struct {
-    MIL_IMU_t imuData;  // 传感器数据
+    MIL_IMU_t imuData;        // 传感器数据
     MIL_Quat_t quat;          // 四元数
     MIL_RotMat_t rotMat;      // 旋转矩阵
     MIL_AttiAng_t attiAng;    // 姿态角
     MIL_AcceAbs_t acceAbs;    // 绝对坐标系加速度
     MIL_AcceLin_t acceLin;    // 线性加速度
+
     float lastTime;           // 上一次解算时间戳（s）
+
     int initSampleCount;      // 初始化累计样本数
     int initSampleTarget;     // 初始化目标样本数
     float initAxSum;          // 初始化阶段加速度累计和
     float initAySum;
     float initAzSum;
     int isQuatInited;         // 初始四元数是否完成
-    int stationaryCount;      // 静止判定连续样本数
+
+    int stationaryCount;      // 静止确认阶段连续样本数
     int stationaryTarget;     // 静止判定目标样本数
+
     float gyroBiasX;          // 陀螺偏置X
     float gyroBiasY;          // 陀螺偏置Y
     float gyroBiasZ;          // 陀螺偏置Z
-    float biasGxSum;          // 静止窗口累计gyro X
-    float biasGySum;          // 静止窗口累计gyro Y
-    float biasGzSum;          // 静止窗口累计gyro Z
+
+    float biasGxSum;          // bias采样阶段累计gyro X
+    float biasGySum;          // bias采样阶段累计gyro Y
+    float biasGzSum;          // bias采样阶段累计gyro Z
+
+    /*
+     * 静止窗口阶段标志：
+     * 0 = 静止确认阶段
+     * 1 = bias采样阶段
+     *
+     * 当前bias更新逻辑是两阶段：
+     * 第一阶段连续满足静止条件 stationaryTarget 次，只用于确认静止；
+     * 第二阶段重新采集 stationaryTarget 次 gyro，用于计算newBias。
+     */
+    int stationaryPhase;
+
+    /*
+     * bias采样阶段的采样计数。
+     * 只有 stationaryPhase == 1 时才累计。
+     */
+    int biasSampleCount;
+
+    /*
+     * gyro bias是否已经完成第一次初始化。
+     *
+     * 0 = 还没有完成第一次可靠gyro bias初始化；
+     * 1 = 已经完成第一次初始化，后续bias只做慢更新。
+     */
+    int isGyroBiasInited;
+
 } MIL_Handle_t;
+
 
 //初始化
 void mil_handle_init(MIL_Handle_t*p);
-//获取传感器值（rad/s）（m/s）（s）
-void mil_get_imu(MIL_Handle_t*p, float gx, float gy, float gz, float ax, float ay, float az, float time);
+
+//获取传感器值（rad/s）（m/s²）（s）
+void mil_get_imu(MIL_Handle_t*p,
+                 float gx, float gy, float gz,
+                 float ax, float ay, float az,
+                 float time);
+
 //获取绝对坐标系加速度
 void mil_get_aaccel(MIL_Handle_t*p, float* aax, float* aay, float* aaz);
+
 //获取线性加速度（去重力）
 void mil_get_alin(MIL_Handle_t*p, float* lax, float* lay, float* laz);
+
 //获取欧拉角
 void mil_get_ang(MIL_Handle_t*p, float* roll, float* pitch, float* yaw);
+
 //实时解算
 void mil_while_run(MIL_Handle_t*p);

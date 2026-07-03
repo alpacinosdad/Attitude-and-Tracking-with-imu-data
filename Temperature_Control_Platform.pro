@@ -19,6 +19,7 @@ SOURCES += \
     Uart_Connect.cpp \
     main.cpp \
     micro_imu_lib.c \
+    filter_design_lib.cpp \
     qcustomplot.cpp \
     widget.cpp
 
@@ -26,6 +27,7 @@ HEADERS += \
     Uart_Connect.h \
     imu_api.h \
     micro_imu_lib.h \
+    filter_design_lib.h \
     qcustomplot.h \
     widget.h
 

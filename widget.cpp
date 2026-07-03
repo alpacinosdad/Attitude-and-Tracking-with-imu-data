@@ -6830,15 +6830,17 @@ void Widget::on_Bat_export_flash_data_clicked()
 // 26.6.15 mike 新建两个滤波器，低通给加速度计，高通给陀螺仪
 
 
-const double Widget::SOS_COEFFS_GYRO[1][6] = {
-    { 0.0304687473064697, 0.0304687473064697, 0.0,
-      1.0, -0.939062505387061, 0.0 },
+double Widget::SOS_COEFFS_GYRO[1][6] = {
+    { 0.0, 0.0, 0.0,
+      1.0, 0.0, 0.0 },
 };
 
 
-const double Widget::SOS_COEFFS_ACC[1][6] = {
-    { 0.0304687473064697, 0.0304687473064697, 0.0,
-      1.0, -0.939062505387061, 0.0 },
+
+
+double Widget::SOS_COEFFS_ACC[1][6] = {
+    { 0.0, 0.0, 0.0,
+      1.0, 0.0, 0.0 },
 };
 
 
@@ -6944,6 +6946,17 @@ double Widget::sosFilterCascade(FilterChannel &ch, double in, const double coeff
     return x;
 }
 
+static void loadFilterCoeffs(double (&dst)[NUM_STAGES][6], int type, float sampleHz, float cutoffHz)
+{
+    double ba[6] = {0.0, 0.0, 0.0, 1.0, 0.0, 0.0};
+    if (mil_design_ba_coeffs(1, sampleHz, cutoffHz, type, ba) != 0) {
+        return;
+    }
+    for (int i = 0; i < 6; ++i) {
+        dst[0][i] = ba[i];
+    }
+}
+
 void Widget::initFilters()
 {
     m_filtAx.reset();
@@ -6953,7 +6966,8 @@ void Widget::initFilters()
     m_filtGy.reset();
     m_filtGz.reset();
 
-
+    loadFilterCoeffs(SOS_COEFFS_ACC, 0, FS, ACCEL_CUTOFF_HZ);
+    loadFilterCoeffs(SOS_COEFFS_GYRO, 0, FS, ACCEL_CUTOFF_HZ);
 }
 
 void Widget::initHannWindow()
@@ -7028,7 +7042,7 @@ void Widget::processData(float rawAx, float rawAy, float rawAz,float rawGx, floa
 
 
 
-    // 实时绘图：addData + 20s 滑动窗口（原 %500 约 10s 才刷新一次）
+    // 实时绘图：addData + 20s 滑动窗口（原 %500 约 10s 才刷新一次）   6.25更新 mike nian 改为 永远看到0
     constexpr double WINDOW_SEC = 20.0;
     const double sampleHz = static_cast<double>(logSamplingRateHz());
     const double t = (static_cast<double>(Log_For_Act_display_count) - 1.0) / sampleHz;
@@ -7036,20 +7050,21 @@ void Widget::processData(float rawAx, float rawAy, float rawAz,float rawGx, floa
     ui->BAT_Customplot_Set_Hannwindow->graph(0)->addData(t, filtAx);
     ui->BAT_Customplot_Set_Hannwindow->graph(1)->addData(t, filtAy);
     ui->BAT_Customplot_Set_Hannwindow->graph(2)->addData(t, filtAz);
-    ui->BAT_Customplot_Set_Hannwindow->graph(0)->data()->removeBefore(t - WINDOW_SEC);
-    ui->BAT_Customplot_Set_Hannwindow->graph(1)->data()->removeBefore(t - WINDOW_SEC);
-    ui->BAT_Customplot_Set_Hannwindow->graph(2)->data()->removeBefore(t - WINDOW_SEC);
+    //ui->BAT_Customplot_Set_Hannwindow->graph(0)->data()->removeBefore(t - WINDOW_SEC);
+    //ui->BAT_Customplot_Set_Hannwindow->graph(1)->data()->removeBefore(t - WINDOW_SEC);
+    //ui->BAT_Customplot_Set_Hannwindow->graph(2)->data()->removeBefore(t - WINDOW_SEC);
 
     ui->BAT_Customplot_Set_Hannwindow_Gyro->graph(0)->addData(t, filtGx);
     ui->BAT_Customplot_Set_Hannwindow_Gyro->graph(1)->addData(t, filtGy);
     ui->BAT_Customplot_Set_Hannwindow_Gyro->graph(2)->addData(t, filtGz);
-    ui->BAT_Customplot_Set_Hannwindow_Gyro->graph(0)->data()->removeBefore(t - WINDOW_SEC);
-    ui->BAT_Customplot_Set_Hannwindow_Gyro->graph(1)->data()->removeBefore(t - WINDOW_SEC);
-    ui->BAT_Customplot_Set_Hannwindow_Gyro->graph(2)->data()->removeBefore(t - WINDOW_SEC);
-
-    ui->BAT_Customplot_Set_Hannwindow->xAxis->setRange(t - WINDOW_SEC, t);
+    //ui->BAT_Customplot_Set_Hannwindow_Gyro->graph(0)->data()->removeBefore(t - WINDOW_SEC);
+    //ui->BAT_Customplot_Set_Hannwindow_Gyro->graph(1)->data()->removeBefore(t - WINDOW_SEC);
+    //ui->BAT_Customplot_Set_Hannwindow_Gyro->graph(2)->data()->removeBefore(t - WINDOW_SEC);
+   
+    const double xMax = (t < WINDOW_SEC) ? WINDOW_SEC : t;
+    ui->BAT_Customplot_Set_Hannwindow->xAxis->setRange(0,xMax);
     ui->BAT_Customplot_Set_Hannwindow->yAxis->setRange(-1500, 1500);
-    ui->BAT_Customplot_Set_Hannwindow_Gyro->xAxis->setRange(t - WINDOW_SEC, t);
+    ui->BAT_Customplot_Set_Hannwindow_Gyro->xAxis->setRange(0,xMax);
     ui->BAT_Customplot_Set_Hannwindow_Gyro->yAxis->setRange(-1000, 1000);
 
     static uint8_t replot_div = 0;
