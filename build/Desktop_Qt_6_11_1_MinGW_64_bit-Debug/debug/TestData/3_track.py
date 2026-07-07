@@ -75,10 +75,10 @@ from gesture_rectangle_show import (
 
 # imu_result CSV，应该包含：
 # time_s / aax / aay / aaz / 姿态矩阵或四元数
-RESULT_IMU_CSV_PATH = "BAT_Heat_Log_Data_2026_06_26_18_26_17_imu_result.csv"
+RESULT_IMU_CSV_PATH = "BAT_Heat_Log_Data_2026_06_26_17_10_31_imu_result.csv"
 
 # 原始 IMU CSV，包含原始加速度和陀螺仪
-RAW_IMU_CSV_PATH = "BAT_Heat_Log_Data_2026_06_26_18_26_17.csv"
+RAW_IMU_CSV_PATH = "BAT_Heat_Log_Data_2026_06_26_17_10_31.csv"
 
 # 时间列名
 TIME_COL = "time_s"
@@ -121,11 +121,11 @@ USE_AACCEL_AS_WORLD_LINEAR = True
 APPLY_ACC_HPF = False
 ACC_HPF_CUTOFF_HZ = 0.05
 
-APPLY_VEL_HPF = False
-VEL_HPF_CUTOFF_HZ = 0.05
+APPLY_VEL_HPF = True
+VEL_HPF_CUTOFF_HZ = 0.1
 
-APPLY_DISP_HPF = False
-DISP_HPF_CUTOFF_HZ = 0.02
+APPLY_DISP_HPF = True
+DISP_HPF_CUTOFF_HZ = 0.5
 
 
 # ----------------------------
@@ -376,7 +376,8 @@ def integrate_accel_to_velocity_with_static_reset(accel, time_s, static_mask):
 
         # 当前帧静止，速度强制为 0
         if static_mask[n]:
-            velocity[n, :] = 0.0
+           #  7.3 mike velocity[n, :] = 0.0
+            
             continue
 
         # 如果上一帧是静止，当前刚开始运动，则从 0 速度和 0 加速度开始积分
@@ -1111,12 +1112,6 @@ def compute_trajectory(df, time_col=TIME_COL):
     # 5. static=True，加速度置零
     if ZERO_LINEAR_ACCEL_WHEN_STATIC and np.any(static_mask):
         accel_used[static_mask, :] = 0.0
-
-    print_accel_debug(
-        accel_used,
-        static_mask,
-        name="World Linear Accel Used For Integration",
-    )
 
     # 6. 加速度积分速度
     velocity_raw = integrate_accel_to_velocity_with_static_reset(
