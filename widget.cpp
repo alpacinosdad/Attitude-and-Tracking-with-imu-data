@@ -466,6 +466,15 @@ Widget::Widget(QWidget *parent)
 {
     ui->setupUi(this);
     setWindowIcon(QIcon(":/Fire.ico"));
+    // mike 26.7.6
+    m_pythonProcess = new QProcess(this);
+    m_udpSocket = new QUdpSocket(this);
+    mil_handle_init(&m_imuHandle);
+    m_imuInitDone = true;
+
+
+    //
+
 
     //     QLabel  ʾͼƬ
     QPixmap pixmap2(":/Grey.png"); //  滻Ϊ    ͼƬ·???
@@ -728,6 +737,7 @@ Widget::Widget(QWidget *parent)
 
     initFilters();
     initHannWindow();
+
 }
 
 
@@ -737,6 +747,115 @@ Widget::Widget(QWidget *parent)
  *         ???
  *         ???
  *************************************************************************/
+
+
+/****************************************************mike 7.6
+void Widget::startPythonViewer()
+{
+    if (m_pythonProcess->state() != QProcess::NotRunning)
+    {
+        qDebug() << "Python already running";
+        return;
+    }
+
+    QString scriptPath =
+        QCoreApplication::applicationDirPath()
+        + "/viewer.py";
+
+    qDebug() << scriptPath;
+
+    m_pythonProcess->start(
+        "python",
+        QStringList() << scriptPath);
+
+    if (!m_pythonProcess->waitForStarted(3000))
+    {
+        qDebug() << "Failed to start Python:";
+        qDebug() << m_pythonProcess->errorString();
+    }
+    else
+    {
+        qDebug() << "Python Viewer Started";
+    }
+}
+
+ *************************************************************************/
+//26.7.6 补充实现
+
+void Widget::startPythonViewer()
+{
+    if(m_pythonProcess->state() != QProcess::NotRunning)
+    {
+        qDebug() << "Python already running";
+        return;
+    }
+
+    QString scriptPath =
+        QDir::cleanPath(
+            QCoreApplication::applicationDirPath()
+            + "/../../../main_realtime_optimized.py");
+
+
+    qDebug() << scriptPath;
+
+    m_pythonProcess->start(
+        "python",
+        QStringList() << scriptPath);
+
+    bool ok = m_pythonProcess->waitForStarted(3000);
+
+    qDebug() << "python started =" << ok;
+}
+
+
+void Widget::sendImuUdp(
+    double time,
+
+    double ax,
+    double ay,
+    double az,
+
+    double gx,
+    double gy,
+    double gz,
+
+    double qw,
+    double qx,
+    double qy,
+    double qz,
+
+    double aax,
+    double aay,
+    double aaz)
+{
+    QString msg =
+        QString(
+            "%1,%2,%3,%4,%5,%6,%7,%8,%9,%10,%11,%12,%13,%14")
+        .arg(time)
+
+        .arg(ax)
+        .arg(ay)
+        .arg(az)
+
+        .arg(gx)
+        .arg(gy)
+        .arg(gz)
+
+        .arg(qw)
+        .arg(qx)
+        .arg(qy)
+        .arg(qz)
+
+        .arg(aax)
+        .arg(aay)
+        .arg(aaz);
+
+    m_udpSocket->writeDatagram(
+        msg.toUtf8(),
+        QHostAddress::LocalHost,
+        8888);
+}
+
 
 void Widget::connectSignalSolt()
 {
@@ -2165,6 +2284,12 @@ void Widget::Rec_Data_Proc(uint8_t *Rec)
                 {
                     if(1 == Rec[5])
                     {
+                        //mike 7.6 启动python
+                         startPythonViewer();
+
+                         //sendTestUdp();
+
+                        //
                          Board_data.heat_profile_time_flag = 1;
                          Board_data.heat_tcrt_time_flag = 0;
                          display_paintEvent_count = 0;
@@ -2289,6 +2414,24 @@ void Widget::Rec_Data_Proc(uint8_t *Rec)
  * ????  ????
  * ????  ????
  *************************************************************************/
+//mike 26.7.6  2.58注释掉
+
+/**************************************************************************
+void Widget::sendTestUdp()
+{
+    QByteArray msg = "hello";
+
+    m_udpSocket->writeDatagram(
+        msg,
+        QHostAddress::LocalHost,
+        8888);
+
+    qDebug() << "UDP send:" << msg;
+}
+
+
+*************************************************************************/
+
 void Widget::QCustomplot_Display_Log_Proc(QCustomPlot *CustomPlot,uint32_t ArrayNumber)
 {
 
@@ -6827,7 +6970,7 @@ void Widget::on_Bat_export_flash_data_clicked()
 **************************************************************************/
 
 
-// 26.6.15 mike 新建两个滤波器，低通给加速度计，高通给陀螺仪
+// 26.6.15 mike 新建两个滤波器，低通
 
 
 double Widget::SOS_COEFFS_GYRO[1][6] = {
@@ -7040,6 +7183,76 @@ void Widget::processData(float rawAx, float rawAy, float rawAz,float rawGx, floa
     LOG_Gyro_y_h[Log_For_Act_display_count-1] = filtGy;
     LOG_Gyro_z_h[Log_For_Act_display_count-1] = filtGz;
 
+  //26.7.6 新增实时计算四元数
+    const float ax =
+            static_cast<float>((filtAx / 1000.0) * 9.8);
+
+    const float ay =
+            static_cast<float>((filtAy / 1000.0) * 9.8);
+
+    const float az =
+            static_cast<float>((filtAz / 1000.0) * 9.8);
+
+    const float gx =
+            static_cast<float>(filtGx * 0.01745);
+
+    const float gy =
+            static_cast<float>(filtGy * 0.01745);
+
+    const float gz =
+            static_cast<float>(filtGz * 0.01745);
+
+    const float imuTime =
+            static_cast<float>(
+                (Log_For_Act_display_count - 1.0)
+                / logSamplingRateHz());
+
+    mil_get_imu(
+        &m_imuHandle,
+        gx,gy,gz,
+        ax,ay,az,
+        imuTime);
+
+    mil_while_run(&m_imuHandle);
+
+
+    float aax = 0.0f;
+    float aay = 0.0f;
+    float aaz = 0.0f;
+
+    mil_get_aaccel(
+        &m_imuHandle,
+        &aax,
+        &aay,
+        &aaz);
+
+
+
+    sendImuUdp(
+        imuTime,
+
+        ax,
+        ay,
+        az,
+
+        gx,
+        gy,
+        gz,
+
+        m_imuHandle.quat.w,
+        m_imuHandle.quat.x,
+        m_imuHandle.quat.y,
+        m_imuHandle.quat.z,
+
+        aax,
+        aay,
+        aaz);
+
+
+
+
+
+    //
 
 
     // 实时绘图：addData + 20s 滑动窗口（原 %500 约 10s 才刷新一次）   6.25更新 mike nian 改为 永远看到0

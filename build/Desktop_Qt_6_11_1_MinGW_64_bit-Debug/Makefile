@@ -322,6 +322,7 @@ Makefile: ../../Temperature_Control_Platform.pro C:/mikenian/code/qtdownload/6.1
 		C:/mikenian/code/qtdownload/6.11.1/mingw_64/lib/Qt6Widgets.prl \
 		C:/mikenian/code/qtdownload/6.11.1/mingw_64/lib/Qt6Gui.prl \
 		C:/mikenian/code/qtdownload/6.11.1/mingw_64/lib/Qt6SerialPort.prl \
+		C:/mikenian/code/qtdownload/6.11.1/mingw_64/lib/Qt6Network.prl \
 		C:/mikenian/code/qtdownload/6.11.1/mingw_64/lib/Qt6Core.prl \
 		C:/mikenian/code/qtdownload/6.11.1/mingw_64/lib/Qt6EntryPoint.prl \
 		C:/mikenian/code/qtdownload/6.11.1/mingw_64/mkspecs/features/build_pass.prf \
@@ -579,6 +580,7 @@ C:/mikenian/code/qtdownload/6.11.1/mingw_64/lib/Qt6PrintSupport.prl:
 C:/mikenian/code/qtdownload/6.11.1/mingw_64/lib/Qt6Widgets.prl:
 C:/mikenian/code/qtdownload/6.11.1/mingw_64/lib/Qt6Gui.prl:
 C:/mikenian/code/qtdownload/6.11.1/mingw_64/lib/Qt6SerialPort.prl:
+C:/mikenian/code/qtdownload/6.11.1/mingw_64/lib/Qt6Network.prl:
 C:/mikenian/code/qtdownload/6.11.1/mingw_64/lib/Qt6Core.prl:
 C:/mikenian/code/qtdownload/6.11.1/mingw_64/lib/Qt6EntryPoint.prl:
 C:/mikenian/code/qtdownload/6.11.1/mingw_64/mkspecs/features/build_pass.prf:

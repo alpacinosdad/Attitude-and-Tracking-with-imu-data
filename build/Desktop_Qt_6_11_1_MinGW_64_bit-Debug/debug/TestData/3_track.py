@@ -75,10 +75,10 @@ from gesture_rectangle_show import (
 
 # imu_result CSV，应该包含：
 # time_s / aax / aay / aaz / 姿态矩阵或四元数
-RESULT_IMU_CSV_PATH = "BAT_Heat_Log_Data_2026_06_26_17_10_31_imu_result.csv"
+RESULT_IMU_CSV_PATH = "BAT_Heat_Log_Data_2026_07_06_21_38_13_imu_result.csv"
 
 # 原始 IMU CSV，包含原始加速度和陀螺仪
-RAW_IMU_CSV_PATH = "BAT_Heat_Log_Data_2026_06_26_17_10_31.csv"
+RAW_IMU_CSV_PATH = "BAT_Heat_Log_Data_2026_07_06_21_38_13.csv"
 
 # 时间列名
 TIME_COL = "time_s"

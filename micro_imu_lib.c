@@ -399,7 +399,7 @@ void mil_while_run(MIL_Handle_t* p)
 
     /*
      * 四元数初始化。
-     * 当前保持你的参数 INIT_QUAT_SAMPLE_COUNT = 2 不变。
+     * 参数 INIT_QUAT_SAMPLE_COUNT = 2 表示取两帧初始化。
      */
     if(!p->isQuatInited)
     {
@@ -542,7 +542,7 @@ void mil_while_run(MIL_Handle_t* p)
     float egy = 0.0f;
     float egz = 0.0f;
 
-    // 如果启用加速度计修正
+    // 启用加速度计修正
     if(EN_ACC_FIX)
     {
         // 根据当前四元数估计重力方向，并与加速度方向比较，得到误差项
@@ -729,7 +729,7 @@ static void acce_to_linear(float ax, float ay, float az, MIL_RotMat_t* R,
                            float *lax, float *lay, float *laz)
 {
     // 先求 R 的转置矩阵 Rt = R^T
-    // 这里实际上只取到了转置矩阵第三列需要用到的三个元素
+    // 这里实际上只取到了转置矩阵第三列需要用到的三个元素 因为重力单一方向
     float Rt13 = R->R31;
     float Rt23 = R->R32;
     float Rt33 = R->R33;

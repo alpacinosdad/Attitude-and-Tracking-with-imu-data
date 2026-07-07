@@ -1,6 +1,8 @@
 ﻿#ifndef WIDGET_H
 #define WIDGET_H
 
+
+
 #include <QWidget>
 #include <QIcon>
 #include <QAction>
@@ -24,6 +26,19 @@
 #include <QFile>
 #include <QTextStream>
 #include <QFileDialog>
+
+/*    mike 26.7.6 python通信         */
+#include <QProcess>
+#include <QUdpSocket>
+
+extern "C" {
+#include "micro_imu_lib.h"
+}
+
+
+
+
+/*     math           */
 
 #include <algorithm>
 
@@ -256,6 +271,45 @@ protected:
         }
 
     }
+
+    // mike 26.7.6
+
+private:
+
+    QProcess *m_pythonProcess;
+
+    QUdpSocket *m_udpSocket;
+
+    void startPythonViewer();
+
+    //void sendTestUdp();
+
+    //test改为实际传输
+    void sendImuUdp(
+        double time,
+
+        double ax,
+        double ay,
+        double az,
+
+        double gx,
+        double gy,
+        double gz,
+
+        double qw,
+        double qx,
+        double qy,
+        double qz,
+
+        double aax,
+        double aay,
+        double aaz);
+
+
+    MIL_Handle_t m_imuHandle;
+    bool m_imuInitDone;
+
+
 
 
     // mike 26.6.3

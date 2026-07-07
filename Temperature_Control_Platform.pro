@@ -1,4 +1,8 @@
-QT       += core gui axcontainer printsupport serialport
+QT       += core gui axcontainer printsupport serialport network
+
+#mike 26.7.6
+
+
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
