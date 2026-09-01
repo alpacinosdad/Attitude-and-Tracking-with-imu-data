@@ -21,14 +21,15 @@
 ├── main_realtime_with_trajectory.py              # 姿态轨迹可视化脚本
 └── Temperature_Control_Platform.pro              # Qt工程文件
 ```
+<img width="645" height="339" alt="image" src="https://github.com/user-attachments/assets/150f9adf-098c-4948-9c6f-e0a849ee6788" />
+
+
 
 ## 核心功能
 ### 滤波器模块 filter_design_lib
-- **FIR滤波器**：线性相位滤波，用于离线数据集预处理，输出无相位失真的参考信号，作为算法标定基准。
-- **IIR滤波器**：计算开销低，资源占用小，用于嵌入式设备实时抑制传感器高频噪声。
 - 开放参数配置接口，可自定义截止频率、滤波器阶数。
 
-### 姿态解算与状态机模块 imu_api
+### 姿态解算与状态机模块 micro_imu
 - 传感器数据融合，采用**互补滤波**求解四元数姿态，规避万向锁问题，输出欧拉角姿态信息。
 - **ZUPT零速修正**：静止状态检测，动态校准陀螺仪零偏，有效抑制陀螺仪零偏带来的姿态漂移。
 - 内置运动状态机：结合姿态角、角速度、运动强度、持续时间阈值，识别静置、移动、稳定持握、使用准备四种工作状态。
@@ -46,6 +47,12 @@
 2. 基于静止检测实现ZUPT零偏补偿方案，不需要额外硬件，改善长时间姿态解算漂移问题。
 3. 模块化分层设计：滤波、姿态解算、状态机逻辑相互解耦，便于修改、裁剪与平台移植。
 
+
 ## 项目说明
 本项目为实习期间开发，硬件：TDK ICM‑42670‑P 六轴IMU。
+<img width="638" height="328" alt="image" src="https://github.com/user-attachments/assets/55a7ae91-04f7-4347-baf8-a26110081c1d" />
+<img width="534" height="344" alt="image" src="https://github.com/user-attachments/assets/5c2878b1-d1fe-45a5-a8b1-f77f6d15f15b" />
+
+
+
 ```
