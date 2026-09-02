@@ -49,10 +49,24 @@
 
 
 ## 项目说明
-本项目为实习期间开发，硬件：TDK ICM‑42670‑P 六轴IMU。
+本项目为实习期间开发，硬件：TDK ICM‑42670‑P 六轴IMU。植入笔状器件，可通过上位机读取加速度计和陀螺仪数据。
 <img width="638" height="328" alt="image" src="https://github.com/user-attachments/assets/55a7ae91-04f7-4347-baf8-a26110081c1d" />
+
+
+
+
+
+最终结果，可实现笔状器件的朝向姿态估计。
+
 <img width="534" height="344" alt="image" src="https://github.com/user-attachments/assets/5c2878b1-d1fe-45a5-a8b1-f77f6d15f15b" />
 
+
+
+
+
+
+可依据加速度计和陀螺仪数据分析用户行为，比如步行跑步等等。
+<img width="645" height="332" alt="image" src="https://github.com/user-attachments/assets/4d88acda-6926-4db0-b8a2-61bc4468fe5b" />
 
 
 ```
